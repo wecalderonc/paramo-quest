@@ -17,6 +17,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/icon-192.png", "icons/icon-512.png"],
       manifest: {
+        id: base,
         name: "Páramo Quest",
         short_name: "PáramoQuest",
         description:
@@ -28,10 +29,18 @@ export default defineConfig({
         background_color: "#0a120d",
         theme_color: "#0a120d",
         icons: [
-          { src: "icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" },
           {
-            src: "icons/icon-512.png",
+            src: `${base}icons/icon-192.png`,
+            sizes: "192x192",
+            type: "image/png",
+          },
+          {
+            src: `${base}icons/icon-512.png`,
+            sizes: "512x512",
+            type: "image/png",
+          },
+          {
+            src: `${base}icons/icon-512.png`,
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",

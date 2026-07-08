@@ -1,5 +1,13 @@
 import { useRef, useState } from "react";
-import { Download, Upload, Trash2, Smartphone, Shield, FlaskConical } from "lucide-react";
+import {
+  Download,
+  Upload,
+  Trash2,
+  Smartphone,
+  Shield,
+  FlaskConical,
+} from "lucide-react";
+import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import { exportAll, importAll, resetAll, type ExportData } from "../db/repo";
 import { FREEZES_PER_MONTH } from "../domain/streak";
 import {
@@ -19,6 +27,7 @@ export function SettingsView({ state }: { state: AppState }) {
   const simulated = simKey ?? getSimulatedDate();
   const [simDate, setSimDate] = useState(simulated ?? "");
   const isSimulating = simulated !== null;
+  const { canInstall, isStandalone, install } = useInstallPrompt();
 
   const applySimDate = async (iso: string) => {
     setSimulatedDate(iso);
@@ -180,11 +189,69 @@ export function SettingsView({ state }: { state: AppState }) {
         <h3 className="flex items-center gap-2 font-semibold">
           <Smartphone className="h-4 w-4 text-niebla-300" /> Instalar en Android
         </h3>
-        <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-niebla-300">
-          <li>Abre esta URL en Chrome (Android).</li>
-          <li>Menú ⋮ → “Añadir a pantalla de inicio” / “Instalar app”.</li>
-          <li>Se instala como app: pantalla completa y funciona offline.</li>
-        </ol>
+        {isStandalone ? (
+          <p className="mt-2 text-sm text-musgo-200">
+            Ya estás usando la app instalada (pantalla completa, sin barra de
+            URL).
+          </p>
+        ) : (
+          <>
+            {canInstall ? (
+              <button
+                onClick={async () => {
+                  const ok = await install();
+                  setMsg(
+                    ok
+                      ? "App instalada. Ábrela desde el ícono en el launcher."
+                      : "Instalación cancelada.",
+                  );
+                }}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-musgo-600 px-4 py-3 text-sm font-semibold hover:bg-musgo-500"
+              >
+                <Smartphone className="h-4 w-4" /> Instalar Páramo Quest
+              </button>
+            ) : (
+              <p className="mt-2 text-sm text-niebla-300">
+                Chrome no muestra el botón automático todavía. Usa el menú del
+                navegador (pasos abajo). También ayuda navegar un poco (Hoy →
+                Semana) y volver a Ajustes.
+              </p>
+            )}
+            <ol className="mt-3 list-inside list-decimal space-y-2 text-sm text-niebla-300">
+              <li>
+                Abre la URL en <b>Google Chrome</b> (no Firefox, no el
+                navegador de Facebook/WhatsApp).
+              </li>
+              <li>
+                Toca <b>⋮</b> (tres puntos, arriba a la derecha). Busca una de
+                estas opciones:
+                <ul className="mt-1 list-inside list-disc pl-2 text-niebla-400">
+                  <li>“Instalar aplicación”</li>
+                  <li>“Instalar app”</li>
+                  <li>“Añadir a la pantalla de inicio”</li>
+                  <li>“Añadir a pantalla principal”</li>
+                </ul>
+              </li>
+              <li>
+                Si no aparece en ⋮, prueba <b>⋮ → Compartir</b> y busca{" "}
+                <b>“Añadir a la pantalla de inicio”</b>.
+              </li>
+              <li>
+                Otra opción: en la barra de direcciones, a la derecha, a veces
+                hay un ícono <b>↓</b> o <b>+</b> para instalar.
+              </li>
+              <li>
+                Confirma el nombre <b>Páramo Quest</b> → Instalar / Añadir.
+              </li>
+            </ol>
+            <p className="mt-2 text-[11px] text-niebla-700">
+              URL:{" "}
+              <code className="text-niebla-300">
+                https://wecalderonc.github.io/paramo-quest/
+              </code>
+            </p>
+          </>
+        )}
       </section>
 
       <section className="rounded-2xl border border-red-900/50 bg-surface-2 p-4">

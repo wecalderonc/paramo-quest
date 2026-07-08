@@ -105,10 +105,21 @@ Aparece un ícono en el launcher, como una app normal.
 
 ### B4. Si no sale “Instalar app”
 
-- Confirma que la URL empieza con **https://**
-- Usa **Chrome**, no Firefox ni Samsung Internet
-- Navega un poco (Hoy → Semana → Progreso) y vuelve al menú ⋮
-- Alternativa: ⋮ → **Compartir** → **Añadir a la pantalla de inicio**
+Chrome **no siempre** muestra “Instalar app” en el menú, aunque la PWA esté bien. Prueba en este orden:
+
+1. **Ajustes** (pestaña abajo) → sección **Instalar en Android**. Si aparece el botón verde **Instalar Páramo Quest**, úsalo.
+2. Menú **⋮** (tres puntos) y busca **cualquiera** de estas (el nombre varía según versión de Chrome):
+   - “Instalar aplicación”
+   - “Instalar app”
+   - “Añadir a la pantalla de inicio”
+   - “Añadir a pantalla principal”
+3. Si no está en ⋮: **⋮ → Compartir** → “Añadir a la pantalla de inicio”.
+4. Mira la **barra de direcciones** (arriba): a veces hay un ícono **↓** o **+** a la derecha para instalar.
+5. Navega un poco (Hoy → Semana → Progreso), espera ~30 s y vuelve a ⋮.
+6. Confirma que usas **Google Chrome** (no Firefox, Samsung Internet, ni un enlace abierto desde WhatsApp/Facebook — esos no instalan PWAs).
+7. La URL debe ser exactamente `https://wecalderonc.github.io/paramo-quest/` (con **https**).
+
+**“Añadir a la pantalla de inicio”** también vale: crea un ícono en el launcher. Si al abrirlo ves la app a pantalla completa (sin barra de URL), quedó como PWA.
 
 ---
 
