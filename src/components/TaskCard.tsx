@@ -18,6 +18,26 @@ const TYPE_STYLE: Record<Task["type"], string> = {
   review: "bg-purple-900/40 text-purple-300",
 };
 
+type TaskStep = {
+  minutes: string | null;
+  text: string;
+};
+
+function parseTaskSteps(description: string): TaskStep[] {
+  return description
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^•\s*/, ""))
+    .map((line) => {
+      const withMinutes = line.match(/^\(([^)]+)\)\s*(.+)$/);
+      if (withMinutes) {
+        return { minutes: withMinutes[1], text: withMinutes[2] };
+      }
+      return { minutes: null, text: line };
+    });
+}
+
 export function TaskCard({
   task,
   done,
@@ -30,6 +50,8 @@ export function TaskCard({
   showDate?: string;
 }) {
   const [justChecked, setJustChecked] = useState(false);
+  const steps = parseTaskSteps(task.description);
+  const hasStructuredSteps = steps.length > 1 || steps.some((s) => s.minutes);
 
   const handleToggle = async () => {
     const next = !done;
@@ -98,9 +120,26 @@ export function TaskCard({
             )}
           </div>
 
-          <p className="mt-1 text-sm leading-snug text-niebla-100/90">
-            {task.description}
-          </p>
+          {hasStructuredSteps ? (
+            <div className="mt-2 space-y-1.5">
+              {steps.map((step, idx) => (
+                <div key={`${task.id}-step-${idx}`} className="flex items-start gap-2">
+                  {step.minutes ? (
+                    <span className="mt-0.5 inline-flex min-w-14 shrink-0 items-center justify-center rounded-md bg-surface-3 px-1.5 py-0.5 text-[10px] font-semibold text-frailejon-300">
+                      {step.minutes}
+                    </span>
+                  ) : (
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-niebla-500/80" />
+                  )}
+                  <p className="text-sm leading-snug text-niebla-100/90">{step.text}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1 whitespace-pre-line text-sm leading-snug text-niebla-100/90">
+              {task.description}
+            </p>
+          )}
 
           {task.doneCriteria && (
             <p className="mt-1.5 text-xs text-musgo-300">

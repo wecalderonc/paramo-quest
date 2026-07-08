@@ -42,8 +42,9 @@ def slug(text: str) -> str:
 def strip_md(text: str) -> str:
     """Quita marcado markdown pero conserva el texto (incl. texto de links)."""
     text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
-    text = text.replace("**", "").replace("*", "")
-    return re.sub(r"\s+", " ", text).strip()
+    text = text.replace("**", "").replace("*", "").replace("`", "")
+    text = re.sub(r"\s+", " ", text).strip()
+    return re.sub(r"\s+([,.;:])", r"\1", text)
 
 
 def first_url(text: str) -> str | None:
@@ -67,6 +68,134 @@ def parse_holidays(md: str) -> list[dict]:
     return holidays
 
 
+def parse_day_header(header: str) -> tuple[int, int, str, bool] | None:
+    """Devuelve (day_start, day_end, title, is_rest) o None."""
+    hm = re.match(
+        r"^(Lun|Mar|Mié|Jue|Vie)(?:\s+a\s+(Lun|Mar|Mié|Jue|Vie))?"
+        r"(?:\s*\(([^)]*)\))?\s*—\s*(.+?)\.?$",
+        header,
+    )
+    if not hm:
+        return None
+    d1, d2, paren, title = hm.groups()
+    day_start = DAY_TOKENS.index(d1)
+    day_end = DAY_TOKENS.index(d2) if d2 else day_start
+    is_rest = (
+        "FESTIVO" in header
+        or (paren and "FESTIVO" in paren)
+        or strip_md(title).lower() == "descanso"
+    )
+    return day_start, day_end, title, is_rest
+
+
+def parse_day_body(body: str) -> tuple[str, str, str]:
+    """Extrae mañana, noche y hecho del cuerpo (inline o bloques v5)."""
+    morning_m = re.search(
+        r"\*Mañana(?:\s*\([^)]*\))?\*:\s*(.*?)(?=\s*\*Noche(?:\s*\([^)]*\))?\*:|\s*\*Hecho:\*|$)",
+        body,
+        re.DOTALL | re.IGNORECASE,
+    )
+    night_m = re.search(
+        r"\*Noche(?:\s*\([^)]*\))?\*:\s*(.*?)(?=\s*\*Hecho:\*|$)",
+        body,
+        re.DOTALL | re.IGNORECASE,
+    )
+    done_m = re.search(r"\*Hecho:\*\s*(.*?)$", body, re.DOTALL)
+
+    morning = morning_m.group(1).strip() if morning_m else ""
+    night = night_m.group(1).strip() if night_m else ""
+    done = done_m.group(1).strip() if done_m else ""
+    return morning, night, done
+
+
+def flatten_body(text: str) -> str:
+    """Convierte pasos numerados y sub-bullets a líneas legibles."""
+    lines: list[str] = []
+    in_code = False
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line.startswith("```"):
+            in_code = not in_code
+            continue
+        if in_code:
+            continue
+        numbered = bool(re.match(r"^\d+\.\s+", line))
+        bulleted = bool(re.match(r"^-\s+", line))
+        line = re.sub(r"^\d+\.\s*", "", line)
+        line = re.sub(r"^-\s+", "", line)
+        line = strip_md(line)
+        if not line or line == "-":
+            continue
+        if numbered or bulleted:
+            lines.append(f"• {line}")
+        else:
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def append_tasks(
+    tasks: list[dict],
+    *,
+    cur_week: dict,
+    cur_phase: dict,
+    day_start: int,
+    day_end: int,
+    title: str,
+    morning: str,
+    night: str,
+    done: str,
+    body: str,
+) -> None:
+    is_project_week = (
+        "Proyecto" in cur_week["title"]
+        or cur_phase["id"] in ("modulo-sensores", "mes-5")
+    )
+    done_flat = strip_md(done).rstrip(".")
+
+    for dow in range(day_start, day_end + 1):
+        day_id = slug(DAY_TOKENS[dow])
+        task_date = (
+            date.fromisoformat(cur_week["startDate"]) + timedelta(days=dow)
+        ).isoformat()
+
+        if morning:
+            if re.search(r"\*\*Posts?\s+\d|Post\s+\d+\s+LinkedIn", body, re.I):
+                ttype, xp = "post", 30
+            elif is_project_week:
+                ttype, xp = "project", 15
+            else:
+                ttype, xp = "study", 10
+            tasks.append({
+                "id": f"{cur_week['id']}-{day_id}-m",
+                "weekId": cur_week["id"],
+                "dayOfWeek": dow,
+                "block": "morning",
+                "title": strip_md(title),
+                "description": flatten_body(morning),
+                "doneCriteria": done_flat,
+                "resourceUrl": first_url(morning) or first_url(body),
+                "type": ttype,
+                "xp": xp,
+                "date": task_date,
+            })
+
+        if night and not re.match(r"^descanso\.?$", strip_md(night), re.IGNORECASE):
+            is_review = "revisión" in night.lower()
+            tasks.append({
+                "id": f"{cur_week['id']}-{day_id}-n",
+                "weekId": cur_week["id"],
+                "dayOfWeek": dow,
+                "block": "night",
+                "title": "Revisión semanal" if is_review else "Bloque ligero",
+                "description": flatten_body(night),
+                "doneCriteria": "",
+                "resourceUrl": first_url(night) or first_url(body),
+                "type": "review" if is_review else "study",
+                "xp": 20 if is_review else 5,
+                "date": task_date,
+            })
+
+
 def main() -> None:
     md = SRC_MD.read_text(encoding="utf-8")
 
@@ -87,15 +216,19 @@ def main() -> None:
     week_hdr = re.compile(r"^#### S(\d+) \([^)]*\) — (.+)$")
     phase_hdr = re.compile(r"^### (.+)$")
 
-    for raw in detail.splitlines():
+    lines = detail.splitlines()
+    i = 0
+    while i < len(lines):
+        raw = lines[i]
         line = raw.strip()
         if not line:
+            i += 1
             continue
 
         pm = phase_hdr.match(line)
         if pm:
             full = pm.group(1)
-            key, _, rest = full.partition(" — ")
+            key, _, _rest = full.partition(" — ")
             key = key.strip()
             cur_phase = {
                 "id": slug(key),
@@ -106,6 +239,7 @@ def main() -> None:
                 "order": len(phases),
             }
             phases.append(cur_phase)
+            i += 1
             continue
 
         wm = week_hdr.match(line)
@@ -121,99 +255,75 @@ def main() -> None:
                 "startDate": (WEEK1_MONDAY + timedelta(weeks=num - 1)).isoformat(),
             }
             weeks.append(cur_week)
+            i += 1
             continue
 
         if cur_phase and line.startswith("**Entregable"):
             cur_phase["deliverable"] = strip_md(line.split(":", 1)[-1])
+            i += 1
             continue
 
-        # Descripción de fase: primer párrafo tras el header (antes de la primera semana)
-        if (cur_phase and cur_week is None or (cur_phase and cur_week and cur_week["phaseId"] != cur_phase["id"])):
-            pass
-        if cur_phase and not cur_phase["description"] and cur_week is None \
-                and not line.startswith(("#", "-", "|", "**Entregable", "```", ">")):
+        if (
+            cur_phase
+            and not cur_phase["description"]
+            and cur_week is None
+            and not line.startswith(("#", "-", "|", "**Entregable", "```", ">"))
+        ):
             if not any(w["phaseId"] == cur_phase["id"] for w in weeks):
                 cur_phase["description"] = strip_md(line)
+                i += 1
                 continue
 
         dm = day_line.match(line)
-        if not dm or not cur_week:
+        if dm and cur_week and cur_phase and not raw.startswith("  "):
+            header, inline_rest = dm.group(1), dm.group(2).strip()
+            if inline_rest.startswith(("—", "–")):
+                header = f"{header} {inline_rest.rstrip('.')}"
+                inline_rest = ""
+            parsed = parse_day_header(header)
+            if not parsed:
+                print(f"  [WARN] header no reconocido: {header!r}", file=sys.stderr)
+                i += 1
+                continue
+
+            day_start, day_end, title, is_rest = parsed
+            if is_rest:
+                i += 1
+                continue
+
+            body_parts: list[str] = []
+            if inline_rest:
+                body_parts.append(inline_rest)
+            i += 1
+            while i < len(lines):
+                nxt = lines[i]
+                if nxt.startswith("#### ") or nxt.startswith("### "):
+                    break
+                if nxt.strip().startswith("**Entregable"):
+                    break
+                if re.match(r"^- \*\*", nxt) and not nxt.startswith("  "):
+                    break
+                if nxt.strip():
+                    body_parts.append(nxt.rstrip())
+                i += 1
+
+            body = "\n".join(body_parts)
+            morning, night, done = parse_day_body(body)
+            append_tasks(
+                tasks,
+                cur_week=cur_week,
+                cur_phase=cur_phase,
+                day_start=day_start,
+                day_end=day_end,
+                title=title,
+                morning=morning,
+                night=night,
+                done=done,
+                body=body,
+            )
             continue
 
-        header, rest = dm.group(1), dm.group(2)
-
-        if "FESTIVO" in header:
-            continue  # día de descanso, sin tareas
-
-        # header: "Lun — Título." | "Lun a Jue — Título." | "Jue (Nochebuena) — Ligero."
-        hm = re.match(
-            r"^(Lun|Mar|Mié|Jue|Vie)(?:\s+a\s+(Lun|Mar|Mié|Jue|Vie))?"
-            r"(?:\s*\(([^)]*)\))?\s*—\s*(.+?)\.?$",
-            header,
-        )
-        if not hm:
-            print(f"  [WARN] header no reconocido: {header!r}", file=sys.stderr)
-            continue
-        d1, d2, _paren, title = hm.groups()
-        day_start = DAY_TOKENS.index(d1)
-        day_end = DAY_TOKENS.index(d2) if d2 else day_start
-
-        body = rest.strip()
-        mm = re.search(r"\*Mañana\*:\s*(.*?)(?=\s*\*Noche\*|\s*\*Hecho:|$)", body)
-        nm = re.search(r"\*Noche\*:\s*(.*?)(?=\s*\*Hecho:|$)", body)
-        hmatch = re.search(r"\*Hecho:\*\s*(.*)$", body)
-
-        morning = mm.group(1).strip() if mm else ""
-        night = nm.group(1).strip() if nm else ""
-        done = strip_md(hmatch.group(1)).rstrip(".") if hmatch else ""
-
-        is_project_week = (
-            "Proyecto" in cur_week["title"]
-            or cur_phase["id"] in ("modulo-sensores", "mes-5")
-        )
-
-        for dow in range(day_start, day_end + 1):
-            day_id = slug(DAY_TOKENS[dow])
-            task_date = (
-                date.fromisoformat(cur_week["startDate"]) + timedelta(days=dow)
-            ).isoformat()
-
-            if morning:
-                if re.search(r"\*\*Posts?\s+\d|Post\s+\d+\s+LinkedIn", body):
-                    ttype, xp = "post", 30
-                elif is_project_week:
-                    ttype, xp = "project", 15
-                else:
-                    ttype, xp = "study", 10
-                tasks.append({
-                    "id": f"{cur_week['id']}-{day_id}-m",
-                    "weekId": cur_week["id"],
-                    "dayOfWeek": dow,
-                    "block": "morning",
-                    "title": strip_md(title),
-                    "description": strip_md(morning),
-                    "doneCriteria": done,
-                    "resourceUrl": first_url(morning),
-                    "type": ttype,
-                    "xp": xp,
-                    "date": task_date,
-                })
-
-            if night and not re.match(r"^descanso\.?$", strip_md(night), re.IGNORECASE):
-                is_review = "revisión" in night.lower()
-                tasks.append({
-                    "id": f"{cur_week['id']}-{day_id}-n",
-                    "weekId": cur_week["id"],
-                    "dayOfWeek": dow,
-                    "block": "night",
-                    "title": "Revisión semanal" if is_review else "Bloque ligero",
-                    "description": strip_md(night),
-                    "doneCriteria": "",
-                    "resourceUrl": first_url(night),
-                    "type": "review" if is_review else "study",
-                    "xp": 20 if is_review else 5,
-                    "date": task_date,
-                })
+        i += 1
 
     out = {"phases": phases, "weeks": weeks, "tasks": tasks, "holidays": holidays}
     OUT.parent.mkdir(parents=True, exist_ok=True)
