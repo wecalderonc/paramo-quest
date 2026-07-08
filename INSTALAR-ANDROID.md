@@ -42,12 +42,19 @@ git push -u origin main
 
 Te pedirá login de GitHub (usuario + token o navegador).
 
-### A4. Activar GitHub Pages
+### A4. Activar GitHub Pages (OBLIGATORIO — si no, el deploy falla con 404)
 
 1. En GitHub abre el repo **paramo-quest**
 2. **Settings** → menú izquierdo **Pages**
-3. En **Build and deployment** → **Source:** elige **GitHub Actions**
-4. Listo. No hace falta más configuración.
+3. En **Build and deployment** → **Source:**
+   - Si dice **Deploy from a branch** → cámbialo a **GitHub Actions**
+   - Si ya dice **GitHub Actions**, no toques nada más
+4. **No hace falta** elegir branch ni carpeta cuando usas GitHub Actions
+5. Espera 10 segundos y guarda si GitHub te lo pide
+
+> **Error típico si saltas este paso:**  
+> `Failed to create deployment (status: 404)` en el job *deploy*.  
+> Significa que Pages no está activado. Vuelve a A4 y confirma que Source = **GitHub Actions**.
 
 ### A5. Esperar el deploy
 
@@ -59,7 +66,13 @@ Te pedirá login de GitHub (usuario + token o navegador).
 
 4. Debe cargar la app (tema oscuro, pestaña Hoy)
 
-Si falla el Action, entra al job rojo y lee el error (casi siempre es que falta activar Pages en A4).
+Si falla el Action, entra al job rojo y lee el error:
+
+| Error | Solución |
+|-------|----------|
+| **404** en `deploy-pages` | Settings → Pages → Source = **GitHub Actions** (paso A4). Luego **Actions** → **Re-run all jobs** |
+| Build rojo (`npm ci`) | Revisa el log; suele ser dependencias — corre `npm ci` en tu Mac |
+| Node 20 deprecated (aviso amarillo) | Ignóralo; el workflow ya usa Node 22 |
 
 ---
 
