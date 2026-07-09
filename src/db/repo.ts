@@ -95,6 +95,7 @@ export interface ExportData {
   journal: unknown[];
   activity: unknown[];
   meta: unknown[];
+  cardStates?: unknown[];
 }
 
 export async function exportAll(): Promise<ExportData> {
@@ -105,6 +106,7 @@ export async function exportAll(): Promise<ExportData> {
     journal: await db.journal.toArray(),
     activity: await db.activity.toArray(),
     meta: await db.meta.toArray(),
+    cardStates: await db.cardStates.toArray(),
   };
 }
 
@@ -112,12 +114,13 @@ export async function importAll(data: ExportData): Promise<void> {
   if (data.version !== 1) throw new Error("Versión de respaldo no soportada");
   await db.transaction(
     "rw",
-    [db.taskStates, db.journal, db.activity, db.meta],
+    [db.taskStates, db.journal, db.activity, db.meta, db.cardStates],
     async () => {
       await db.taskStates.clear();
       await db.journal.clear();
       await db.activity.clear();
       await db.meta.clear();
+      await db.cardStates.clear();
       await db.taskStates.bulkAdd(data.taskStates as never[]);
       await db.journal.bulkAdd(data.journal as never[]);
       await db.activity.bulkAdd(
@@ -125,6 +128,9 @@ export async function importAll(data: ExportData): Promise<void> {
       );
       if (data.meta?.length) {
         await db.meta.bulkAdd(data.meta as never[]);
+      }
+      if (data.cardStates?.length) {
+        await db.cardStates.bulkAdd(data.cardStates as never[]);
       }
     },
   );
@@ -134,12 +140,13 @@ export async function importAll(data: ExportData): Promise<void> {
 export async function resetAll(): Promise<void> {
   await db.transaction(
     "rw",
-    [db.taskStates, db.journal, db.activity, db.meta],
+    [db.taskStates, db.journal, db.activity, db.meta, db.cardStates],
     async () => {
       await db.taskStates.clear();
       await db.journal.clear();
       await db.activity.clear();
       await db.meta.clear();
+      await db.cardStates.clear();
     },
   );
 }

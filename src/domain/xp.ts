@@ -3,6 +3,7 @@ import type { Plan } from "../plan/types";
 export const XP_JOURNAL = 5;
 export const XP_WEEK_BONUS = 50;
 export const XP_PHASE_BONUS = 200;
+export const XP_REVIEW = 2;
 
 export interface Level {
   n: number;
@@ -50,6 +51,7 @@ export interface XpBreakdown {
   fromJournal: number;
   fromWeekBonuses: number;
   fromPhaseBonuses: number;
+  fromReviews: number;
   completedWeeks: string[];
   completedPhases: string[];
 }
@@ -59,6 +61,7 @@ export function computeXp(
   plan: Plan,
   doneTaskIds: Set<string>,
   journalDays: number,
+  reviewCount = 0,
 ): XpBreakdown {
   let fromTasks = 0;
   for (const t of plan.tasks) if (doneTaskIds.has(t.id)) fromTasks += t.xp;
@@ -82,13 +85,16 @@ export function computeXp(
   const fromJournal = journalDays * XP_JOURNAL;
   const fromWeekBonuses = completedWeeks.length * XP_WEEK_BONUS;
   const fromPhaseBonuses = completedPhases.length * XP_PHASE_BONUS;
+  const fromReviews = reviewCount * XP_REVIEW;
 
   return {
-    total: fromTasks + fromJournal + fromWeekBonuses + fromPhaseBonuses,
+    total:
+      fromTasks + fromJournal + fromWeekBonuses + fromPhaseBonuses + fromReviews,
     fromTasks,
     fromJournal,
     fromWeekBonuses,
     fromPhaseBonuses,
+    fromReviews,
     completedWeeks,
     completedPhases,
   };

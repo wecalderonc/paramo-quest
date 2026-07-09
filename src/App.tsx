@@ -3,6 +3,7 @@ import { Header } from "./components/Header";
 import { BottomNav, type View } from "./components/BottomNav";
 import { TodayView } from "./views/TodayView";
 import { WeekView } from "./views/WeekView";
+import { ReviewView } from "./views/ReviewView";
 import { ProgressView } from "./views/ProgressView";
 import { SettingsView } from "./views/SettingsView";
 import { useAppState } from "./hooks/useAppState";
@@ -33,6 +34,7 @@ export default function App() {
       <main className="mx-auto max-w-xl px-4 pb-28 pt-5">
         {view === "today" && <TodayView state={state} />}
         {view === "week" && <WeekView state={state} />}
+        {view === "review" && <ReviewView state={state} />}
         {view === "progress" && <ProgressView state={state} />}
         {view === "settings" && <SettingsView state={state} />}
       </main>

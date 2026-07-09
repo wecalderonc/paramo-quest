@@ -1,11 +1,12 @@
-import { Sun, CalendarDays, TrendingUp, Settings } from "lucide-react";
+import { Sun, CalendarDays, Brain, TrendingUp, Settings } from "lucide-react";
 import { cn } from "../lib/utils";
 
-export type View = "today" | "week" | "progress" | "settings";
+export type View = "today" | "week" | "review" | "progress" | "settings";
 
 const ITEMS: { id: View; label: string; icon: typeof Sun }[] = [
   { id: "today", label: "Hoy", icon: Sun },
   { id: "week", label: "Semana", icon: CalendarDays },
+  { id: "review", label: "Repaso", icon: Brain },
   { id: "progress", label: "Progreso", icon: TrendingUp },
   { id: "settings", label: "Ajustes", icon: Settings },
 ];

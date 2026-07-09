@@ -12,6 +12,17 @@ export interface JournalRow {
   text: string;
 }
 
+export interface CardStateRow {
+  cardId: string;
+  due: string; // yyyy-MM-dd — próximo repaso
+  interval: number; // días
+  ease: number;
+  reps: number;
+  lapses: number;
+  introducedOn: string; // yyyy-MM-dd en que se vio por primera vez
+  lastReviewed: string | null; // ISO datetime
+}
+
 export interface ActivityRow {
   id?: number;
   at: string; // ISO datetime
@@ -22,7 +33,8 @@ export interface ActivityRow {
     | "plan_shifted"
     | "journal"
     | "import"
-    | "cursor_advanced";
+    | "cursor_advanced"
+    | "review";
   payload: Record<string, unknown>;
 }
 
@@ -36,6 +48,7 @@ export const db = new Dexie("ParamoQuest") as Dexie & {
   journal: EntityTable<JournalRow, "date">;
   activity: EntityTable<ActivityRow, "id">;
   meta: EntityTable<MetaRow, "key">;
+  cardStates: EntityTable<CardStateRow, "cardId">;
 };
 
 db.version(1).stores({
@@ -50,4 +63,13 @@ db.version(2).stores({
   journal: "date",
   activity: "++id, at, type",
   meta: "key",
+});
+
+// v3: tarjetas de repaso (SRS) — reemplaza a Anki dentro de la app
+db.version(3).stores({
+  taskStates: "taskId, status, scheduledDate",
+  journal: "date",
+  activity: "++id, at, type",
+  meta: "key",
+  cardStates: "cardId, due, introducedOn",
 });

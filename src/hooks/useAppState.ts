@@ -55,10 +55,11 @@ export function useAppState(): AppState {
     );
     const journalDates = new Set(journal.map((j) => j.date));
 
-    // días activos: día en que se completó una tarea (task_done) o bitácora
+    // días activos: día en que se completó una tarea (task_done), bitácora o repaso
     const activeDays = new Set<string>();
     const doneByDay = new Map<string, number>();
     const undoneCount = new Map<string, number>();
+    let reviewCount = 0;
     for (const a of activity) {
       const d =
         (a.payload as { date?: string }).date ?? a.at.slice(0, 10);
@@ -69,6 +70,9 @@ export function useAppState(): AppState {
         undoneCount.set(d, (undoneCount.get(d) ?? 0) + 1);
       } else if (a.type === "journal") {
         activeDays.add(d);
+      } else if (a.type === "review") {
+        activeDays.add(d);
+        reviewCount++;
       }
     }
     // compensar unchecks del mismo día
@@ -82,7 +86,7 @@ export function useAppState(): AppState {
       }
     }
 
-    const xp = computeXp(plan, doneIds, journalDates.size);
+    const xp = computeXp(plan, doneIds, journalDates.size, reviewCount);
     const today = todayISO();
 
     return {
