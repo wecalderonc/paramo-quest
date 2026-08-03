@@ -19,21 +19,32 @@ export function BottomNav({
   onChange: (v: View) => void;
 }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-3 bg-surface-1/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <div className="mx-auto flex max-w-xl">
-        {ITEMS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => onChange(id)}
-            className={cn(
-              "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors",
-              view === id ? "text-frailejon-400" : "text-niebla-300",
-            )}
-          >
-            <Icon className="h-5 w-5" />
-            {label}
-          </button>
-        ))}
+    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-3/80 bg-surface-0/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+      <div className="mx-auto flex max-w-xl px-2 py-1.5">
+        {ITEMS.map(({ id, label, icon: Icon }) => {
+          const active = view === id;
+          return (
+            <button
+              key={id}
+              onClick={() => onChange(id)}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "tap flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium",
+                active ? "text-frailejon-300" : "text-niebla-500 hover:text-niebla-300",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-8 w-12 items-center justify-center rounded-full transition-colors",
+                  active && "bg-frailejon-600/15",
+                )}
+              >
+                <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
+              </span>
+              {label}
+            </button>
+          );
+        })}
       </div>
     </nav>
   );
