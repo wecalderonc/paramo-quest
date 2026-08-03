@@ -19,11 +19,12 @@ export default function App() {
   return (
     <div className="min-h-dvh">
       {sim && (
-        <div className="bg-frailejon-600/20 px-4 py-1.5 text-center text-xs font-medium text-frailejon-300">
-          Modo prueba · fecha simulada: {sim} ·{" "}
+        <div className="flex items-center justify-center gap-2 bg-frailejon-600/15 px-4 py-1.5 text-center text-xs font-medium text-frailejon-300">
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-frailejon-400" />
+          Modo prueba · hoy simulado: {sim}
           <button
             type="button"
-            className="underline"
+            className="rounded-md px-1.5 py-0.5 underline decoration-frailejon-500/50 hover:bg-frailejon-600/20"
             onClick={() => setView("settings")}
           >
             Ajustes

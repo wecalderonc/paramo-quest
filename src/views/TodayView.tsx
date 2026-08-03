@@ -165,21 +165,36 @@ export function TodayView({ state }: { state: AppState }) {
     );
   }
 
+  const dayTaskCount = dayTasks.length;
+  const dayDoneCount = dayTasks.filter((t) => state.doneIds.has(t.id)).length;
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold capitalize">{formatHuman(planDay)}</h1>
-        {isAhead && (
-          <p className="mt-1 text-xs font-medium text-frailejon-400">
-            Adelantado · calendario real: {formatHuman(calendarToday)}
-          </p>
-        )}
+      <div className="animate-fade-in-up rounded-2xl border border-surface-3 bg-surface-2/60 p-4">
         {phase && week && (
-          <p className="mt-0.5 text-sm text-niebla-300">
-            {phase.emoji} {phase.name.split(" — ")[0]} · S
-            {String(week.number).padStart(2, "0")}: {week.title}
+          <p className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-xs font-medium text-niebla-200">
+            <span>{phase.emoji}</span>
+            {phase.name.split(" — ")[0]} · S{String(week.number).padStart(2, "0")}
           </p>
         )}
+        <h1 className="text-2xl font-bold capitalize tracking-tight">
+          {formatHuman(planDay)}
+        </h1>
+        {week && (
+          <p className="mt-0.5 text-sm text-niebla-300">{week.title}</p>
+        )}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+          {dayTaskCount > 0 && (
+            <span className="font-medium text-musgo-300">
+              {dayDoneCount}/{dayTaskCount} tareas de hoy
+            </span>
+          )}
+          {isAhead && (
+            <span className="font-medium text-frailejon-400">
+              Adelantado · calendario real: {formatHuman(calendarToday)}
+            </span>
+          )}
+        </div>
       </div>
 
       {holidayName ? (
@@ -191,8 +206,9 @@ export function TodayView({ state }: { state: AppState }) {
       ) : (
         <>
           {dayComplete && (
-            <div className="rounded-2xl border border-musgo-600 bg-musgo-900/40 px-4 py-3 text-sm font-semibold text-musgo-200">
-              Día del plan completado. El páramo está orgulloso. 🌄
+            <div className="flex items-center gap-2 rounded-2xl border border-musgo-600 bg-musgo-900/40 px-4 py-3 text-sm font-semibold text-musgo-200">
+              <span className="text-lg">🌄</span>
+              Día del plan completado. El páramo está orgulloso.
             </div>
           )}
           {dayTasks.map((t) => (
